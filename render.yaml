@@ -1,0 +1,29 @@
+databases:
+  - name: amazonia-desenvolve-db
+    databaseName: amazonia_desenvolve
+    user: amazonia_app
+    plan: basic
+services:
+  - type: web
+    name: amazonia-desenvolve
+    runtime: python
+    plan: starter
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    preDeployCommand: "python manage.py migrate --noinput && python manage.py setup_roles"
+    startCommand: "gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --access-logfile -"
+    healthCheckPath: /health/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: amazonia-desenvolve-db
+          property: connectionString
+      - key: ALLOWED_HOSTS
+        sync: false
+      - key: CSRF_TRUSTED_ORIGINS
+        sync: false
