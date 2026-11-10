@@ -8,6 +8,12 @@ if not SECRET_KEY: raise ImproperlyConfigured('SECRET_KEY required')
 DEBUG=os.getenv('DEBUG','False').lower()=='true'
 ALLOWED_HOSTS=[x.strip() for x in os.getenv('ALLOWED_HOSTS','').split(',') if x.strip()]
 CSRF_TRUSTED_ORIGINS=[x.strip() for x in os.getenv('CSRF_TRUSTED_ORIGINS','').split(',') if x.strip()]
+# Trust only the exact hostname assigned to this service by Render.
+render_host=os.getenv('RENDER_EXTERNAL_HOSTNAME','').strip()
+if render_host:
+    ALLOWED_HOSTS.append(render_host)
+    CSRF_TRUSTED_ORIGINS.append('https://'+render_host)
+
 INSTALLED_APPS=['django.contrib.admin','django.contrib.auth','django.contrib.contenttypes','django.contrib.sessions','django.contrib.messages','django.contrib.staticfiles','core']
 MIDDLEWARE=['django.middleware.security.SecurityMiddleware','whitenoise.middleware.WhiteNoiseMiddleware','django.contrib.sessions.middleware.SessionMiddleware','django.middleware.common.CommonMiddleware','django.middleware.csrf.CsrfViewMiddleware','django.contrib.auth.middleware.AuthenticationMiddleware','django.contrib.messages.middleware.MessageMiddleware','django.middleware.clickjacking.XFrameOptionsMiddleware']
 ROOT_URLCONF='config.urls'

@@ -54,3 +54,33 @@ class AccessTests(TestCase):
         self.assertContains(self.client.get('/'),'Cadastros e acompanhamento')
         self.assertEqual(self.client.post('/accounts/logout/').status_code,302)
         self.assertEqual(self.client.get('/').status_code,302)
+
+class DeploymentTests(TestCase):
+    def test_bootstrap_creates_admin_without_resetting_password(self):
+        import os
+        from unittest.mock import patch
+        import secrets
+        password = secrets.token_urlsafe(32)
+        with patch.dict(os.environ, {'INITIAL_ADMIN_PASSWORD': password}):
+            call_command('bootstrap_admin', verbosity=0)
+        admin = User.objects.get(username='administrador')
+        self.assertTrue(admin.is_superuser)
+        self.assertTrue(admin.check_password(password))
+        replacement = secrets.token_urlsafe(32)
+        admin.set_password(replacement)
+        admin.save()
+        with patch.dict(os.environ, {'INITIAL_ADMIN_PASSWORD': password}):
+            call_command('bootstrap_admin', verbosity=0)
+        admin.refresh_from_db()
+        self.assertTrue(admin.check_password(replacement))
+        self.assertEqual(User.objects.filter(is_superuser=True).count(),1)
+
+    @override_settings(SECURE_SSL_REDIRECT=False)
+    def test_health_reflects_database_failure_without_details(self):
+        from unittest.mock import patch
+        from django.db import DatabaseError
+        self.assertEqual(self.client.get('/health/').status_code,200)
+        with patch('django.db.connection.cursor',side_effect=DatabaseError('private details')):
+            response=self.client.get('/health/')
+        self.assertEqual(response.status_code,503)
+        self.assertNotIn(b'private details',response.content)

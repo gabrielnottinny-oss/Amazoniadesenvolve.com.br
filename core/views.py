@@ -9,7 +9,15 @@ from .territory import scope, is_global
 @login_required
 def dashboard(request):
     return render(request,'dashboard.html',{'modules':[(key,title) for key,(model,form,title,perm) in MODULES.items() if request.user.has_perm('core.view_'+perm)],'totais':{'beneficiarios':scope(Beneficiario.objects.all(),Beneficiario,request.user).count(),'projetos':scope(ProjetoSocial.objects.all(),ProjetoSocial,request.user).count(),'agentes':scope(AgenteComunitario.objects.all(),AgenteComunitario,request.user).count()}})
-def health(request): return HttpResponse('ok',content_type='text/plain')
+def health(request):
+    from django.db import connection, DatabaseError
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT 1')
+            cursor.fetchone()
+    except DatabaseError:
+        return HttpResponse('unavailable',status=503,content_type='text/plain')
+    return HttpResponse('ok',content_type='text/plain')
 
 MODULES={
  'municipios':(Municipio,MunicipioForm,'Municípios','municipio'),
